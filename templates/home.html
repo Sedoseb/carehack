@@ -1,0 +1,1207 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Touch Palette</title>
+    <!-- Import Anton Font for the title -->
+    <link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
+    <style>
+        /* This is like setting up our magic drawing board */
+        body {
+            margin: 0; /* No empty spaces around the edges */
+            background-color: #fff; /* Our background outside the canvas is now white! */
+            overflow: hidden; /* No silly scroll bars popping up */
+            display: flex; /* Helps us arrange things */
+            flex-direction: column; /* Stacks title, controls, canvas, and instructions */
+            justify-content: space-between; /* Spreads out elements vertically */
+            align-items: center; /* Centers horizontally */
+            min-height: 100vh; /* Makes sure our page is at least full screen height */
+            font-family: "Inter", sans-serif; /* A nice, clear font */
+            color: #333; /* Darker text for white background */
+            padding: 10px; /* Small padding around the whole body */
+            box-sizing: border-box; /* Include padding in element's total width and height */
+        }
+        canvas {
+            display: block; /* Our magic drawing page */
+            background-color: #000; /* Default canvas background */
+            border-radius: 15px; /* Nice rounded corners */
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3); /* Darker shadow for white body */
+            touch-action: none; /* Prevents default browser touch actions like scrolling */
+            flex-grow: 1; /* Allows canvas to take up available space */
+            width: 90%; /* Keep width at 90% */
+            max-width: 900px; /* Max width for larger screens */
+            margin-top: 10px; /* Small margin from controls */
+            margin-bottom: 10px; /* Small margin from instructions */
+        }
+        /* Styles for white canvas background */
+        canvas.white-background {
+            background-color: #fff;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.3); /* Lighter shadow for white canvas */
+        }
+
+        #title {
+            font-family: 'Anton', sans-serif; /* Anton font for the title */
+            font-size: 3.5em; /* Bigger and bolder */
+            font-weight: bold;
+            color: #00CED1; /* A vibrant color for the title */
+            text-shadow: 0 0 15px rgba(0, 206, 209, 0.8); /* Stronger glow */
+            margin-top: 10px; /* Space from top of page */
+            margin-bottom: 10px;
+            z-index: 10;
+            text-align: center;
+        }
+        #instructions {
+            font-size: 1.1em;
+            text-align: center;
+            padding: 10px 20px;
+            opacity: 0.8;
+            z-index: 10;
+            color: #333; /* Dark text for white body background */
+            margin-bottom: 10px; /* Space from bottom of page */
+            max-width: 90%; /* Don't be too wide */
+        }
+        #controls {
+            display: flex; /* Arrange buttons in a row */
+            gap: 15px; /* Space between buttons */
+            z-index: 10; /* Make sure controls are on top */
+            flex-wrap: wrap; /* Allow buttons to wrap on smaller screens */
+            justify-content: center; /* Center buttons */
+            align-items: center; /* Align items vertically in the center */
+            background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent background for the bar */
+            padding: 10px 20px;
+            border-radius: 15px;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+            margin-top: 10px; /* Space from title */
+            margin-bottom: 10px; /* Space from canvas */
+        }
+        .control-button {
+            background-color: #4CAF50; /* Green button */
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 10px; /* Rounded corners for buttons */
+            cursor: pointer; /* Shows it's clickable */
+            font-size: 1em;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Button shadow */
+            transition: background-color 0.3s ease, transform 0.1s ease; /* Smooth changes */
+        }
+        .control-button:hover {
+            background-color: #45a049; /* Darker green on hover */
+            transform: translateY(-2px); /* Little lift effect */
+        }
+        .control-button:active {
+            background-color: #3e8e41; /* Even darker when pressed */
+            transform: translateY(0); /* Go back down when pressed */
+        }
+        /* Specific colors for different button types */
+        #clearButton { background-color: #f44336; } /* Red for clear */
+        #clearButton:hover { background-color: #da190b; }
+        #clearButton:active { background-color: #b01006; }
+
+        #brushTypeButton { background-color: #008CBA; } /* Blue for brush */
+        #brushTypeButton:hover { background-color: #007399; }
+        #brushTypeButton:active { background-color: #005a77; }
+
+        #soundPackButton { background-color: #f0ad4e; } /* Orange for sound */
+        #soundPackButton:hover { background-color: #ed9c28; }
+        #soundPackButton:active { background-color: #d58512; }
+
+        #saveButton { background-color: #2196F3; } /* Blue for save */
+        #saveButton:hover { background-color: #0b7dda; }
+        #saveButton:active { background-color: #0a6ebd; }
+
+        /* Erase Button */
+        #eraseButton { background-color: #9C27B0; } /* Purple for erase */
+        #eraseButton:hover { background-color: #7B1FA2; }
+        #eraseButton:active { background-color: #6A1B9A; }
+        #eraseButton.active { /* Style when eraser is ON */
+            background-color: #E91E63; /* Bright pink when active */
+            box-shadow: 0 0 15px #E91E63;
+        }
+
+        /* Favorites Button */
+        #favoritesButton { background-color: #FFC107; color: #333; } /* Yellow for favorites */
+        #favoritesButton:hover { background-color: #FFA000; }
+        #favoritesButton:active { background-color: #FF8F00; }
+
+        /* How to Play Button */
+        #howToPlayBtn { background-color: #607D8B; } /* Grey-blue for how to play */
+        #howToPlayBtn:hover { background-color: #455A64; }
+        #howToPlayBtn:active { background-color: #37474F; }
+
+        /* Canvas Background Toggle Button */
+        #canvasBgButton { background-color: #795548; } /* Brown for canvas background */
+        #canvasBgButton:hover { background-color: #5D4037; }
+        #canvasBgButton:active { background-color: #4E342E; }
+
+        /* NEW: Storyteller Button */
+        #storytellerButton { background-color: #8BC34A; } /* Light Green for storyteller */
+        #storytellerButton:hover { background-color: #689F38; }
+        #storytellerButton:active { background-color: #558B2F; }
+
+
+        /* Size control styles */
+        #sizeControls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background-color: rgba(255, 255, 255, 0.1);
+            padding: 8px 15px;
+            border-radius: 10px;
+        }
+        #sizeSlider {
+            width: 100px;
+            -webkit-appearance: none; /* Hide default slider */
+            appearance: none;
+            height: 8px;
+            border-radius: 4px;
+            background: #ddd;
+            outline: none;
+        }
+        #sizeSlider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #4CAF50;
+            cursor: pointer;
+        }
+        #sizeSlider::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #4CAF50;
+            cursor: pointer;
+        }
+        #sizeValue {
+            min-width: 30px;
+            text-align: center;
+            font-weight: bold;
+            color: white; /* Ensure text is visible on dark control bar */
+        }
+
+        /* Color picker styles */
+        #colorPicker {
+            position: absolute;
+            bottom: 80px; /* Position above instructions */
+            background: rgba(0, 0, 0, 0.8); /* Slightly darker background */
+            padding: 15px;
+            border-radius: 10px;
+            display: none; /* Hidden by default */
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+            width: 280px; /* Adjusted width for better layout */
+            z-index: 100;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
+        }
+        .color-option {
+            width: 35px; /* Slightly larger color options */
+            height: 35px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        .color-option:hover {
+            transform: scale(1.15); /* Slightly less aggressive hover scale */
+        }
+        .color-option.selected {
+            border-color: #00CED1; /* Highlight selected color */
+            transform: scale(1.15);
+        }
+        #colorWheel {
+            width: 100%;
+            height: 100px; /* Height for the color wheel */
+            margin-top: 10px;
+            cursor: crosshair;
+            border-radius: 5px;
+            border: 1px solid #555; /* Small border for visibility */
+        }
+        #customColorBtn {
+            background: #555;
+            color: white;
+            border: none;
+            padding: 8px 15px; /* Larger padding */
+            border-radius: 8px; /* Rounded corners */
+            margin-top: 10px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: background-color 0.3s;
+        }
+        #customColorBtn:hover {
+            background: #777;
+        }
+        #currentColor {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin: 0 auto;
+            border: 3px solid white; /* Thicker border */
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5); /* Glow effect */
+            transition: transform 0.2s;
+        }
+        #currentColor:hover {
+            transform: scale(1.1);
+        }
+
+        /* Favorites Palette styles */
+        #favoritesPalette {
+            position: absolute;
+            top: 170px; /* Position below controls */
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px;
+            border-radius: 10px;
+            display: none; /* Hidden by default */
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+            width: 200px; /* Smaller width for favorites */
+            z-index: 100;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
+        }
+        #favoritesPalette .color-option {
+            width: 30px; /* Smaller options for favorites */
+            height: 30px;
+        }
+
+        /* How To Play Overlay Styles */
+        #howToPlayOverlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.9); /* Darker, slightly transparent background */
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 0 30px rgba(255, 255, 255, 0.5);
+            z-index: 200; /* On top of everything */
+            display: none; /* Hidden by default, shown by button */
+            flex-direction: column;
+            align-items: flex-start; /* Align text to the left */
+            max-width: 80%; /* Don't be too wide on large screens */
+            text-align: left; /* Ensure text is left-aligned */
+            color: #fff; /* White text for the overlay */
+        }
+        #howToPlayOverlay h3 {
+            margin-top: 0;
+            color: #00CED1; /* Highlight title color */
+            font-size: 1.8em;
+        }
+        #howToPlayOverlay ul {
+            list-style: none; /* No bullets */
+            padding: 0;
+            margin: 15px 0;
+            font-size: 1.1em;
+        }
+        #howToPlayOverlay ul li {
+            margin-bottom: 10px;
+            display: flex;
+            align-items: flex-start;
+        }
+        #howToPlayOverlay ul li::before {
+            content: '•'; /* Custom bullet point */
+            color: #FFD700; /* Yellow bullet */
+            display: inline-block;
+            width: 1em;
+            margin-left: -1em;
+            margin-right: 0.5em;
+        }
+        #howToPlayOverlay button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1.2em;
+            align-self: center; /* Center the button */
+            margin-top: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            transition: background-color 0.3s ease, transform 0.1s ease;
+        }
+        #howToPlayOverlay button:hover {
+            background-color: #45a049;
+            transform: translateY(-2px);
+        }
+
+        /* NEW: Story Overlay Styles */
+        #storyOverlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.9);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 0 30px rgba(255, 255, 255, 0.5);
+            z-index: 200;
+            display: none; /* Hidden by default */
+            flex-direction: column;
+            align-items: center;
+            max-width: 70%;
+            text-align: center;
+            color: #fff;
+        }
+        #storyOverlay h3 {
+            margin-top: 0;
+            color: #8BC34A; /* Storyteller button color */
+            font-size: 1.8em;
+        }
+        #storyOverlay p {
+            font-size: 1.2em;
+            margin: 15px 0;
+            line-height: 1.5;
+        }
+        #storyOverlay #storyText {
+            min-height: 50px; /* Give it some space */
+        }
+        #storyOverlay #storyLoading {
+            display: none;
+            font-style: italic;
+            color: #aaa;
+        }
+        #storyOverlay button {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="title">Touch Palette</div>
+
+    <div id="controls">
+        <button id="brushTypeButton" class="control-button">Brush: Circle</button>
+        <button id="favoritesButton" class="control-button">Favorites</button>
+        <div id="sizeControls">
+            <span>Size:</span>
+            <input type="range" id="sizeSlider" min="10" max="150" value="50">
+            <span id="sizeValue">50</span>
+        </div>
+        <div id="currentColor" style="background-color: #FF6347;"></div>
+        <button id="eraseButton" class="control-button">Erase</button>
+        <button id="clearButton" class="control-button">Clear Canvas</button>
+        <button id="saveButton" class="control-button">Save Drawing</button>
+        <button id="soundPackButton" class="control-button">Sounds: Plinks</button>
+        <button id="canvasBgButton" class="control-button">Canvas: Black</button> <!-- Canvas BG Toggle -->
+        <button id="howToPlayBtn" class="control-button">How To Play</button>
+        <button id="storytellerButton" class="control-button">Tell Me a Story ✨</button> <!-- NEW: Storyteller Button -->
+    </div>
+
+    <canvas id="myCanvas"></canvas>
+    <!-- Instructions panel moved to the bottom -->
+    <div id="instructions">Tap to place shapes. Drag existing shapes to move. Use slider to resize. Click color circle to change color.</div>
+
+    <div id="colorPicker">
+        <!-- Preset color options -->
+        <div class="color-option" style="background-color: #FF6347;" data-color="#FF6347"></div>
+        <div class="color-option" style="background-color: #FFD700;" data-color="#FFD700"></div>
+        <div class="color-option" style="background-color: #3CB371;" data-color="#3CB371"></div>
+        <div class="color-option" style="background-color: #6A5ACD;" data-color="#6A5ACD"></div>
+        <div class="color-option" style="background-color: #FF69B4;" data-color="#FF69B4"></div>
+        <div class="color-option" style="background-color: #00CED1;" data-color="#00CED1"></div>
+        <div class="color-option" style="background-color: #FFA07A;" data-color="#FFA07A"></div>
+        <div class="color-option" style="background-color: #9370DB;" data-color="#9370DB"></div>
+        <div class="color-option" style="background-color: #FF4500;" data-color="#FF4500"></div>
+        <div class="color-option" style="background-color: #7CFC00;" data-color="#7CFC00"></div>
+        <div class="color-option" style="background-color: #20B2AA;" data-color="#20B2AA"></div>
+        <div class="color-option" style="background-color: #BA55D3;" data-color="#BA55D3"></div>
+        <div class="color-option" style="background-color: #FF8C00;" data-color="#FF8C00"></div>
+        <div class="color-option" style="background-color: #40E0D0;" data-color="#40E0D0"></div>
+        <div class="color-option" style="background-color: #DA70D6;" data-color="#DA70D6"></div>
+        <div class="color-option" style="background-color: #00FF7F;" data-color="#00FF7F"></div>
+        <!-- Color wheel for custom colors -->
+        <canvas id="colorWheel"></canvas>
+        <button id="customColorBtn">Use Custom Color</button>
+    </div>
+
+    <!-- Favorites Palette -->
+    <div id="favoritesPalette">
+        <div class="color-option" style="background-color: #FF6347;" data-color="#FF6347"></div>
+        <div class="color-option" style="background-color: #3CB371;" data-color="#3CB371"></div>
+        <div class="color-option" style="background-color: #00CED1;" data-color="#00CED1"></div>
+        <div class="color-option" style="background-color: #9370DB;" data-color="#9370DB"></div>
+    </div>
+
+
+    <!-- How To Play Overlay -->
+    <div id="howToPlayOverlay">
+        <h3>How To Play</h3>
+        <ul>
+            <li>Tap anywhere to create colorful shapes! (They'll grow with a little pop!)</li>
+            <li>Drag existing shapes to move them around.</li>
+            <li>Each touch plays a musical note.</li>
+            <li>Use the *Brush* button to change the shape you draw.</li>
+            <li>Use the *Favorites* button to quickly pick a favorite color.</li>
+            <li>Use the *Erase* button to draw in black and remove parts of your drawing.</li>
+            <li>Use the *Clear Canvas* button to erase everything.</li>
+            <li>Use the *Save Drawing* button to save your masterpiece as a picture.</li>
+            <li>Use the *Sounds* button to change the type of musical notes.</li>
+            <li>Use the *Canvas* button to switch the drawing background between black and white.</li>
+            <li>Click the small color circle next to "Size" to open the full color picker.</li>
+            <li>Use the size slider to change the size of new shapes.</li>
+            <li>Click *Tell Me a Story ✨* to get a magical story about your drawing!</li>
+        </ul>
+        <button id="closeHowToPlay">Got It!</button>
+    </div>
+
+    <!-- NEW: Story Overlay -->
+    <div id="storyOverlay">
+        <h3>Your Magical Story ✨</h3>
+        <p id="storyText"></p>
+        <p id="storyLoading" style="display: none;">Generating your story...</p>
+        <button id="closeStory">Awesome!</button>
+    </div>
+
+    <script>
+        // Get our special drawing page and our magic paintbrush
+        let canvas = document.getElementById('myCanvas');
+        let ctx = canvas.getContext('2d');
+
+        // Variables to keep track of drawing and selected shapes
+        let isDrawing = false; // Is a finger/mouse currently down?
+        let lastX = 0; // Last X position of finger/mouse
+        let lastY = 0; // Last Y position of finger/mouse
+        let selectedShape = null; // The shape we are currently dragging
+        let shapes = []; // A list of all the shapes on our canvas
+
+        let currentColor = '#FF6347'; // The color we are currently drawing with
+        let isEraserMode = false; // Is the eraser active?
+        let isCanvasWhite = false; // Is the canvas background white?
+
+        // Brush settings (size slider)
+        let currentSize = 50; // Default starting size
+        const minSize = 10;   // Smallest size
+        const maxSize = 150;  // Biggest size
+        const sizeSlider = document.getElementById('sizeSlider');
+        const sizeValue = document.getElementById('sizeValue');
+
+        // Color picker elements
+        const colorPicker = document.getElementById('colorPicker');
+        const currentColorDisplay = document.getElementById('currentColor');
+        const colorWheel = document.getElementById('colorWheel');
+        const colorWheelCtx = colorWheel.getContext('2d');
+        const customColorBtn = document.getElementById('customColorBtn');
+        const colorOptions = document.querySelectorAll('#colorPicker .color-option'); // Specific to color picker
+
+        // Favorites palette elements
+        const favoritesPalette = document.getElementById('favoritesPalette');
+        const favoritesColorOptions = document.querySelectorAll('#favoritesPalette .color-option'); // Specific to favorites
+
+        // How To Play Overlay elements
+        const howToPlayOverlay = document.getElementById('howToPlayOverlay');
+        const closeHowToPlayButton = document.getElementById('closeHowToPlay');
+
+        // Story Overlay elements
+        const storyOverlay = document.getElementById('storyOverlay');
+        const storyText = document.getElementById('storyText');
+        const storyLoading = document.getElementById('storyLoading');
+        const closeStoryButton = document.getElementById('closeStory');
+
+        // Sound for adding a shape
+        const spawnSound = new Audio('spawn.mp3'); // You need to provide this sound file!
+        spawnSound.onerror = () => {
+            console.error("Error loading spawn.mp3. Make sure the file exists in the same folder as index.html.");
+        };
+        spawnSound.load(); // Try to load it to make it ready
+
+        // --- Event Listeners for Controls ---
+
+        // Update size display and selected shape size when slider changes
+        sizeSlider.addEventListener('input', function() {
+            currentSize = parseInt(this.value); // Get the new size from the slider
+            sizeValue.textContent = currentSize; // Show the new size number
+            if (selectedShape) { // If we have a shape selected (dragging it)
+                selectedShape.radius = currentSize; // Change its size
+                redrawCanvas(); // Draw everything again so we see the change
+            }
+        });
+
+        // Initialize color wheel drawing
+        function initColorWheel() {
+            const radius = colorWheel.width / 2;
+            const center = radius;
+            
+            // Draw a rainbow wheel
+            for (let angle = 0; angle < 360; angle += 1) {
+                const startAngle = (angle - 2) * Math.PI / 180;
+                const endAngle = angle * Math.PI / 180;
+                
+                colorWheelCtx.beginPath();
+                colorWheelCtx.moveTo(center, center);
+                colorWheelCtx.arc(center, center, radius, startAngle, endAngle);
+                colorWheelCtx.closePath();
+                
+                // Create a gradient from white to the hue
+                const gradient = colorWheelCtx.createRadialGradient(
+                    center, center, 0, 
+                    center, center, radius
+                );
+                gradient.addColorStop(0, 'white');
+                gradient.addColorStop(1, `hsl(${angle}, 100%, 50%)`); // Use template literal for hsl
+                
+                colorWheelCtx.fillStyle = gradient;
+                colorWheelCtx.fill();
+            }
+        }
+
+        // Show/hide the color picker when the current color circle is clicked
+        currentColorDisplay.addEventListener('click', function() {
+            // If eraser is active, don't open color picker
+            if (isEraserMode) return; 
+
+            colorPicker.style.display = colorPicker.style.display === 'flex' ? 'none' : 'flex';
+            // Ensure the initially selected preset color is highlighted
+            colorOptions.forEach(opt => {
+                if (opt.getAttribute('data-color') === currentColor) {
+                    opt.classList.add('selected');
+                } else {
+                    opt.classList.remove('selected');
+                }
+            });
+            // Hide favorites palette if color picker is opened
+            favoritesPalette.style.display = 'none';
+        });
+
+        // Handle color selection from preset options
+        colorOptions.forEach(option => {
+            option.addEventListener('click', function() {
+                currentColor = this.getAttribute('data-color'); // Get the color from the button
+                currentColorDisplay.style.backgroundColor = currentColor; // Update the display circle
+                colorPicker.style.display = 'none'; // Hide the picker
+                
+                // Update selected shape color if one is selected
+                if (selectedShape) {
+                    selectedShape.color = currentColor;
+                    redrawCanvas();
+                }
+                
+                // Update selection indicator for preset colors
+                colorOptions.forEach(opt => opt.classList.remove('selected'));
+                this.classList.add('selected');
+            });
+        });
+
+        // Handle color selection from color wheel
+        colorWheel.addEventListener('click', function(e) {
+            const rect = colorWheel.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            const pixel = colorWheelCtx.getImageData(x, y, 1, 1).data;
+            if (pixel[3] > 0) { // Check if alpha is not transparent (meaning we clicked on a color)
+                currentColor = `rgb(${pixel[0]}, ${pixel[1]}, ${pixel[2]})`; // Use template literal for rgb
+                currentColorDisplay.style.backgroundColor = currentColor; // Update the display circle
+                
+                // Update selected shape color if one is selected
+                if (selectedShape) {
+                    selectedShape.color = currentColor;
+                    redrawCanvas();
+                }
+                
+                // Remove selected class from preset options when custom color is picked
+                colorOptions.forEach(opt => opt.classList.remove('selected'));
+            }
+        });
+
+        // "Use Custom Color" button simply closes the picker
+        customColorBtn.addEventListener('click', function() {
+            colorPicker.style.display = 'none';
+        });
+
+        // Initialize the color wheel size and draw it
+        colorWheel.width = 250; // Set width for the wheel canvas
+        colorWheel.height = 100; // Set height for the wheel canvas
+        initColorWheel(); // Draw the color wheel
+
+        // --- Sound Packs ---
+
+        // List of all sound packs. Remember to put your sound files in the same folder!
+        const allSoundPacks = [
+            { name: "Plinks", sounds: [new Audio('plink1.mp3'), new Audio('plink2.mp3'), new Audio('plink3.mp3')] },
+            { name: "Nature", sounds: [new Audio('nature1.mp3'), new Audio('nature2.mp3'), new Audio('nature3.mp3')] },
+            { name: "Space", sounds: [new Audio('space1.mp3'), new Audio('space2.mp3'), new Audio('space3.mp3')] }
+        ];
+
+        let currentSoundPackIndex = 0; // Start with the first sound pack (Plinks)
+
+        // Pre-load sounds and add error handling
+        allSoundPacks.forEach(pack => {
+            pack.sounds.forEach((sound, index) => {
+                sound.onerror = () => {
+                    console.error(`Error loading sound for ${pack.name} pack: sound${index + 1}.mp3. Make sure the file exists.`);
+                };
+                sound.load(); // Try to load them a little bit to make them ready
+            });
+        });
+
+        // --- Canvas Resizing and Redrawing ---
+
+        // Makes our drawing page fill up the whole screen, adjusting for controls
+        function resizeCanvas() {
+            // Get heights of top controls and bottom instructions
+            const controlsHeight = document.getElementById('controls').offsetHeight;
+            const instructionsHeight = document.getElementById('instructions').offsetHeight;
+            const titleHeight = document.getElementById('title').offsetHeight;
+            
+            // Calculate available height for canvas, leaving some padding
+            // Adjusted padding to be more robust
+            const padding = 60; // Total vertical padding (top, bottom, and between elements)
+            const availableHeight = window.innerHeight - controlsHeight - instructionsHeight - titleHeight - padding; 
+
+            canvas.width = window.innerWidth * 0.9; // 90% of screen width
+            canvas.height = availableHeight > 100 ? availableHeight : 100; // Ensure min height of 100px
+            redrawCanvas(); // Redraw all shapes when canvas size changes
+        }
+
+        // Draws all the shapes in our 'shapes' list
+        function redrawCanvas() {
+            // Clear the whole canvas with the current background color
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = isCanvasWhite ? '#fff' : '#000'; // Fill with white or black
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            shapes.forEach(shape => {
+                drawShape(shape, shape === selectedShape); // Draw each shape
+            });
+        }
+
+        // Call resize once when the page loads
+        // Using window.addEventListener('load') to ensure all elements are rendered before calculating heights
+        window.addEventListener('load', () => {
+            resizeCanvas();
+            howToPlayOverlay.style.display = 'none'; // Hide it initially
+            storyOverlay.style.display = 'none'; // Ensure story overlay is hidden initially
+        });
+        
+        // And call it again if the window size changes (like turning a tablet sideways)
+        window.addEventListener('resize', resizeCanvas);
+
+        // --- Brush Types and Shape Drawing Functions ---
+
+        // List of all the different shapes our brush can make
+        const brushTypes = ['Circle', 'Square', 'Triangle', 'Star', 'Heart', 'Flower', 'Hexagon', 'Spiral'];
+        let currentBrushTypeIndex = 0; // Start with Circle
+
+        // A blueprint for making new shapes
+        function createShape(x, y, radius, type, color) {
+            return {
+                x, y,
+                initialRadius: 0, // Starts small for animation
+                finalRadius: radius, // Grows to this size
+                currentRadius: 0, // Current size during animation
+                type, color,
+                animationStartTime: null // When the animation started
+            };
+        }
+
+        // This function knows how to draw each type of shape
+        function drawShape(shape, isSelected) {
+            ctx.globalAlpha = 1.0; // Shapes no longer fade, so always fully visible
+            ctx.fillStyle = shape.color; // Pick the shape's color
+            
+            // If the shape is selected (being dragged), draw a white border
+            if (isSelected) {
+                ctx.strokeStyle = '#FFFFFF';
+                ctx.lineWidth = 2;
+            }
+
+            ctx.beginPath(); // Put our pencil down
+
+            // Draw the specific shape based on its type, using currentRadius for animation
+            const drawRadius = shape.currentRadius;
+
+            switch(shape.type) {
+                case 'Circle':
+                    ctx.arc(shape.x, shape.y, drawRadius, 0, 2 * Math.PI);
+                    break;
+                case 'Square':
+                    ctx.rect(shape.x - drawRadius, shape.y - drawRadius, drawRadius * 2, drawRadius * 2);
+                    break;
+                case 'Triangle':
+                    ctx.moveTo(shape.x, shape.y - drawRadius);
+                    ctx.lineTo(shape.x + drawRadius, shape.y + drawRadius);
+                    ctx.lineTo(shape.x - drawRadius, shape.y + drawRadius);
+                    ctx.closePath();
+                    break;
+                case 'Star':
+                    drawStar(ctx, shape.x, shape.y, drawRadius);
+                    break;
+                case 'Heart':
+                    drawHeart(ctx, shape.x, shape.y, drawRadius); // Adjusted to use radius as base size
+                    break;
+                case 'Flower':
+                    drawFlower(ctx, shape.x, shape.y, drawRadius, 6); // 6 petals
+                    break;
+                case 'Hexagon':
+                    drawHexagon(ctx, shape.x, shape.y, drawRadius);
+                    break;
+                case 'Spiral':
+                    drawSpiral(ctx, shape.x, shape.y, drawRadius / 3, 2, 0); // radius, coils, rotation
+                    ctx.strokeStyle = shape.color; // Spiral needs stroke, not fill
+                    ctx.lineWidth = 5;
+                    ctx.stroke();
+                    break;
+            }
+
+            // Fill the shape with color, unless it's a spiral (which is stroked)
+            if (shape.type !== 'Spiral') {
+                ctx.fill();
+                if (isSelected) {
+                    ctx.stroke(); // Draw border for selected shapes
+                }
+            }
+
+            ctx.globalAlpha = 1.0; // Reset transparency for the next drawing
+        }
+
+        // Helper functions for drawing complex shapes (these remain the same)
+        function drawStar(ctx, cx, cy, radius) {
+            const spikes = 5;
+            const outerRadius = radius;
+            const innerRadius = radius * 0.4;
+            let rot = Math.PI/2 * 3; // Start from top
+            const step = Math.PI / spikes;
+
+            ctx.beginPath();
+            ctx.moveTo(cx, cy - outerRadius);
+            
+            for(let i = 0; i < spikes; i++) {
+                ctx.lineTo(cx + Math.cos(rot) * outerRadius, cy + Math.sin(rot) * outerRadius);
+                rot += step;
+                ctx.lineTo(cx + Math.cos(rot) * innerRadius, cy + Math.sin(rot) * innerRadius);
+                rot += step;
+            }
+            ctx.closePath();
+        }
+
+        function drawHeart(ctx, x, y, size) {
+            const width = size * 2;
+            const height = size * 2;
+            const topCurveHeight = height * 0.3;
+            
+            ctx.beginPath();
+            ctx.moveTo(x, y + topCurveHeight);
+            
+            ctx.bezierCurveTo(x, y, x - width / 2, y, x - width / 2, y + topCurveHeight);
+            ctx.bezierCurveTo(x - width / 2, y + (height + topCurveHeight) / 2, x, y + (height + topCurveHeight) / 2, x, y + height);
+            ctx.bezierCurveTo(x, y + (height + topCurveHeight) / 2, x + width / 2, y + (height + topCurveHeight) / 2, x + width / 2, y + topCurveHeight);
+            ctx.bezierCurveTo(x + width / 2, y, x, y, x, y + topCurveHeight);
+            
+            ctx.closePath();
+        }
+
+        function drawFlower(ctx, x, y, radius, petals) {
+            ctx.beginPath();
+            
+            for(let i = 0; i < petals; i++) {
+                const angle = (i * 2 * Math.PI) / petals;
+                const petalX = x + radius * Math.cos(angle);
+                const petalY = y + radius * Math.sin(angle);
+                
+                ctx.moveTo(x, y);
+                ctx.arc(petalX, petalY, radius/2, 0, 2 * Math.PI);
+            }
+            
+            ctx.moveTo(x + radius/3, y);
+            ctx.arc(x, y, radius/3, 0, 2 * Math.PI);
+            ctx.closePath();
+        }
+
+        function drawHexagon(ctx, x, y, radius) {
+            ctx.beginPath();
+            for (let i = 0; i < 6; i++) {
+                const angle = (i * 2 * Math.PI / 6) - Math.PI/6;
+                const xPos = x + radius * Math.cos(angle);
+                const yPos = y + radius * Math.sin(angle);
+                if (i === 0) {
+                    ctx.moveTo(xPos, yPos);
+                } else {
+                    ctx.lineTo(xPos, yPos);
+                }
+            }
+            ctx.closePath();
+        }
+
+        function drawSpiral(ctx, x, y, startRadius, coils, rotation) {
+            ctx.beginPath();
+            const a = startRadius;
+            const b = 0.1;
+
+            for (let i = 0; i < Math.PI * 2 * coils; i += 0.1) {
+                const r = a * Math.exp(b * i);
+                const angle = rotation + i;
+                const xPos = x + r * Math.cos(angle);
+                const yPos = y + r * Math.sin(angle);
+                if (i === 0) {
+                    ctx.moveTo(xPos, yPos);
+                } else {
+                    ctx.lineTo(xPos, yPos);
+                }
+            }
+        }
+
+        // --- Adding and Managing Shapes ---
+
+        // Creates a new shape and adds it to our list
+        function addShape(x, y) {
+            const finalRadius = currentSize * (0.8 + Math.random() * 0.4); // Randomize size a bit
+            // Use black if eraser is on AND canvas is black, or white if eraser is on AND canvas is white
+            const shapeColor = isEraserMode ? (isCanvasWhite ? '#fff' : '#000') : currentColor;
+            const newShape = createShape(x, y, finalRadius, brushTypes[currentBrushTypeIndex], shapeColor);
+            
+            shapes.push(newShape); // Add the new shape to our list
+            selectedShape = newShape; // Select the new shape for potential dragging
+            
+            // Play spawn sound for adding a shape
+            spawnSound.pause();
+            spawnSound.currentTime = 0;
+            spawnSound.play();
+
+            // Animation for adding shape
+            newShape.animationStartTime = performance.now(); // Record when animation starts
+            const animationDuration = 300; // Animation duration in milliseconds
+
+            function animateShape(timestamp) {
+                // Ensure animationStartTime is set (first call)
+                if (!newShape.animationStartTime) newShape.animationStartTime = timestamp;
+                
+                const elapsed = timestamp - newShape.animationStartTime; // How much time has passed
+                const progress = Math.min(elapsed / animationDuration, 1); // Progress from 0 (start) to 1 (end)
+
+                // Easing function (easeOutQuad) for smoother growth
+                // This makes the shape grow fast at first, then slow down as it reaches full size
+                const easedProgress = progress * progress; 
+
+                // Calculate the current radius during the animation
+                newShape.currentRadius = newShape.initialRadius + (newShape.finalRadius - newShape.initialRadius) * easedProgress;
+
+                redrawCanvas(); // Draw everything again with the new size
+
+                // If animation is not finished, ask the browser to draw again soon
+                if (progress < 1) {
+                    requestAnimationFrame(animateShape);
+                } else {
+                    // Animation finished, ensure it's at its final size
+                    newShape.currentRadius = newShape.finalRadius;
+                    redrawCanvas();
+                }
+            }
+            requestAnimationFrame(animateShape); // Start the animation!
+
+            // Hide the "How To Play" overlay after the first interaction
+            if (howToPlayOverlay.style.display !== 'none') {
+                howToPlayOverlay.style.display = 'none';
+            }
+        }
+
+        // Plays a random sound from the currently selected sound pack
+        function playRandomSound() {
+            const currentSounds = allSoundPacks[currentSoundPackIndex].sounds;
+            if (currentSounds.length === 0) {
+                console.warn("No sounds in the current pack to play!");
+                return;
+            }
+            
+            let randomSound = currentSounds[Math.floor(Math.random() * currentSounds.length)];
+            randomSound.pause(); // Stop if already playing
+            randomSound.currentTime = 0; // Go to start of sound
+            randomSound.play(); // Play the sound
+        }
+
+        // Finds if a shape exists at the given (x, y) position
+        function getShapeAtPosition(x, y) {
+            // Loop backwards to pick the topmost shape if they overlap
+            for (let i = shapes.length - 1; i >= 0; i--) {
+                const shape = shapes[i];
+                const distance = Math.sqrt(Math.pow(x - shape.x, 2) + Math.pow(y - shape.y, 2));
+                // Check if the click/touch is within the shape's radius
+                // For non-circular shapes, this is an approximation but works well for dragging.
+                if (distance <= shape.currentRadius * 1.5) { // Use currentRadius for hit detection during animation
+                    return shape;
+                }
+            }
+            return null; // No shape found
+        }
+
+        // --- Button Controls ---
+
+        // Get our new magic buttons
+        const clearButton = document.getElementById('clearButton');
+        const brushTypeButton = document.getElementById('brushTypeButton');
+        const soundPackButton = document.getElementById('soundPackButton');
+        const saveButton = document.getElementById('saveButton'); // Get the new save button
+        const eraseButton = document.getElementById('eraseButton'); // Get the erase button
+        const favoritesButton = document.getElementById('favoritesButton'); // Get the favorites button
+        const howToPlayBtn = document.getElementById('howToPlayBtn'); // Get the how to play button
+        const canvasBgButton = document.getElementById('canvasBgButton'); // Get the canvas background button
+        const storytellerButton = document.getElementById('storytellerButton'); // NEW: Get the storyteller button
+
+        // Clear Canvas Button: Clears all shapes
+        clearButton.addEventListener('click', () => {
+            shapes = []; // Empty the list of shapes
+            selectedShape = null; // No shape is selected
+            redrawCanvas(); // Clear the canvas visually
+        });
+
+        // Brush Type Button: Cycles through different brush shapes
+        brushTypeButton.addEventListener('click', () => {
+            currentBrushTypeIndex = (currentBrushTypeIndex + 1) % brushTypes.length; // Go to next shape type
+            brushTypeButton.textContent = `Brush: ${brushTypes[currentBrushTypeIndex]}`; // Update button text
+            isEraserMode = false; // Turn off eraser mode if changing brush
+            eraseButton.classList.remove('active'); // Remove active style from erase button
+            currentColorDisplay.style.backgroundColor = currentColor; // Restore color display
+        });
+
+        // Sound Pack Button: Cycles through different sound packs
+        soundPackButton.addEventListener('click', () => {
+            currentSoundPackIndex = (currentSoundPackIndex + 1) % allSoundPacks.length; // Go to next sound pack
+            soundPackButton.textContent = `Sounds: ${allSoundPacks[currentSoundPackIndex].name}`; // Update button text
+        });
+
+        // Save Button: Saves the canvas as an image
+        saveButton.addEventListener('click', () => {
+            // Temporarily hide the selection highlight if a shape is selected
+            const tempSelectedShape = selectedShape;
+            selectedShape = null;
+            redrawCanvas(); // Redraw without highlight
+
+            // Create a temporary link element
+            const link = document.createElement('a');
+            link.download = 'TouchPalette_Drawing.png'; // Name of the file
+            link.href = canvas.toDataURL('image/png'); // Get the canvas content as an image
+            document.body.appendChild(link); // Add link to the page (temporarily)
+            link.click(); // Simulate a click to download
+            document.body.removeChild(link); // Remove the link
+
+            // Restore the selection highlight if there was one
+            selectedShape = tempSelectedShape;
+            redrawCanvas();
+        });
+
+        // Erase Button Logic
+        eraseButton.addEventListener('click', () => {
+            isEraserMode = !isEraserMode; // Toggle eraser mode
+            if (isEraserMode) {
+                eraseButton.classList.add('active'); // Add active style
+                // Eraser color should match canvas background
+                currentColorDisplay.style.backgroundColor = isCanvasWhite ? '#fff' : '#000'; 
+                colorPicker.style.display = 'none'; // Hide color picker
+                favoritesPalette.style.display = 'none'; // Hide favorites palette
+            } else {
+                eraseButton.classList.remove('active'); // Remove active style
+                currentColorDisplay.style.backgroundColor = currentColor; // Restore previous color
+            }
+        });
+
+        // Favorites Button Logic
+        favoritesButton.addEventListener('click', () => {
+            favoritesPalette.style.display = favoritesPalette.style.display === 'flex' ? 'none' : 'flex';
+            colorPicker.style.display = 'none'; // Hide color picker if favorites is opened
+        });
+
+        // Handle color selection from favorites palette
+        favoritesColorOptions.forEach(option => {
+            option.addEventListener('click', function() {
+                currentColor = this.getAttribute('data-color'); // Get the color
+                currentColorDisplay.style.backgroundColor = currentColor; // Update display
+                favoritesPalette.style.display = 'none'; // Hide palette
+                isEraserMode = false; // Turn off eraser if a color is picked
+                eraseButton.classList.remove('active');
+            });
+        });
+
+        // How To Play Button Logic
+        howToPlayBtn.addEventListener('click', () => {
+            howToPlayOverlay.style.display = 'flex'; // Show the overlay
+            storyOverlay.style.display = 'none'; // Hide story if open
+        });
+
+        // Canvas Background Toggle Button Logic
+        canvasBgButton.addEventListener('click', () => {
+            isCanvasWhite = !isCanvasWhite; // Toggle canvas background state
+            if (isCanvasWhite) {
+                canvas.classList.add('white-background'); // Add CSS class for white background
+                canvasBgButton.textContent = 'Canvas: White'; // Update button text
+            } else {
+                canvas.classList.remove('white-background'); // Remove CSS class for black background
+                canvasBgButton.textContent = 'Canvas: Black'; // Update button text
+            }
+            // If eraser is active, update its display color to match new canvas background
+            if (isEraserMode) {
+                currentColorDisplay.style.backgroundColor = isCanvasWhite ? '#fff' : '#000';
+            }
+            redrawCanvas(); // Redraw all shapes with the new background
+        });
+
+        // NEW: Storyteller Button Logic (Gemini API Integration)
+        storytellerButton.addEventListener('click', async () => {
+            if (shapes.length === 0) {
+                storyText.textContent = "Draw some shapes first, then I can tell you a story!";
+                storyLoading.style.display = 'none';
+                storyOverlay.style.display = 'flex';
+                return;
+            }
+
+            storyText.textContent = ''; // Clear previous story
+            storyLoading.style.display = 'block'; // Show loading indicator
+            storyOverlay.style.display = 'flex'; // Show story overlay
+
+            // Construct a prompt based on the shapes on the canvas
+            let prompt = "Generate a short, imaginative story (3-5 sentences) suitable for young children, inspired by the following elements in a drawing. Make it positive and wondrous. ";
+            
+            shapes.forEach(shape => {
+                // Determine rough position
+                let position = '';
+                if (shape.x < canvas.width / 3) position += 'left ';
+                else if (shape.x > canvas.width * 2 / 3) position += 'right ';
+                else position += 'center ';
+
+                if (shape.y < canvas.height / 3) position += 'top';
+                else if (shape.y > canvas.height * 2 / 3) position += 'bottom';
+                else position += 'middle';
+
+                // Determine size description
+                let sizeDesc = '';
+                if (shape.currentRadius < 30) sizeDesc = 'tiny';
+                else if (shape.currentRadius < 70) sizeDesc = 'medium';
+                else sizeDesc = 'large';
+
+                prompt += `A ${sizeDesc} ${shape.color} ${shape.type} located at the ${position}. `;
+            });
+
+            try {
+                let chatHistory = [];
+                chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+                const payload = { contents: chatHistory };
+                const apiKey = ""; // Leave this empty, Canvas will provide it
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    const text = result.candidates[0].content.parts[0].text;
+                    storyText.textContent = text;
+                } else {
+                    storyText.textContent = "Oops! The storyteller is a bit shy right now. Please try drawing something different!";
+                    console.error("Gemini API response structure unexpected:", result);
+                }
+            } catch (error) {
+                storyText.textContent = "Oh dear! The storyteller is taking a nap. Please try again later!";
+                console.error("Error calling Gemini API:", error);
+            } finally {
+                storyLoading.style.display = 'none'; // Hide loading indicator
+            }
+        });
+
+        closeStoryButton.addEventListener('click', () => {
+            storyOverlay.style.display = 'none'; // Hide story overlay
+        });
+
+
+        // --- Canvas Interaction (Drawing and Moving) ---
+
+        // What happens when a finger/mouse goes down on the canvas
+        function startDrawing(e) {
+            const pos = getPosition(e); // Get the exact position
+            lastX = pos.x;
+            lastY = pos.y;
+            
+            // Check if we're clicking on an existing shape to drag it
+            selectedShape = getShapeAtPosition(lastX, lastY);
+            
+            if (!selectedShape) {
+                // If not dragging an existing shape, create a new one
+                addShape(lastX, pos.y);
+            } else {
+                // If we're dragging an existing shape, bring it to the front
+                const index = shapes.indexOf(selectedShape);
+                if (index > -1) {
+                    shapes.splice(index, 1); // Remove from current position
+                    shapes.push(selectedShape); // Add to end (top of z-index)
+                }
+            }
+            
+            isDrawing = true; // We are now in a "drawing" or "dragging" state
+        }
+
+        // What happens when a finger/mouse moves on the canvas
+        function draw(e) {
+            if (!isDrawing || !selectedShape) return; // Only do something if we're drawing/dragging and have a shape selected
+            
+            const pos = getPosition(e);
+            const dx = pos.x - lastX; // How much the finger/mouse moved horizontally
+            const dy = pos.y - lastY; // How much the finger/mouse moved vertically
+            
+            // Move the selected shape by that much
+            selectedShape.x += dx;
+            selectedShape.y += dy;
+            
+            lastX = pos.x; // Remember the new position
+            lastY = pos.y;
+            
+            redrawCanvas(); // Draw everything again to show the moved shape
+        }
+
+        // What happens when a finger/mouse lifts up
+        function stopDrawing() {
+            isDrawing = false; // We are no longer drawing/dragging
+            selectedShape = null; // Deselect the shape
+            redrawCanvas(); // Redraw to remove selection highlight
+        }
+
+        // Helper to get correct position for both mouse and touch
+        function getPosition(e) {
+            let x, y;
+            
+            if (e.touches) { // If it's a touch event
+                const touch = e.touches[0] || e.changedTouches[0];
+                x = touch.clientX - canvas.getBoundingClientRect().left;
+                y = touch.clientY - canvas.getBoundingClientRect().top;
+            } else { // If it's a mouse event
+                x = e.clientX - canvas.getBoundingClientRect().left;
+                y = e.clientY - canvas.getBoundingClientRect().top;
+            }
+            
+            return { x, y };
+        }
+
+        // --- Main Event Listeners for Canvas ---
+        // These listen for mouse and touch interactions on our magic canvas
+
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing); // Stop drawing if mouse leaves canvas
+
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // Stop browser from scrolling/zooming on touch
+            startDrawing(e);
+        }, { passive: false }); // { passive: false } is important for preventDefault to work
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault(); // Stop browser from scrolling/zooming on touch
+            draw(e);
+        }, { passive: false });
+
+        canvas.addEventListener('touchend', stopDrawing);
+
+        // --- How To Play Overlay Logic ---
+        closeHowToPlayButton.addEventListener('click', () => {
+            howToPlayOverlay.style.display = 'none'; // Hide it when the button is clicked
+        });
+
+    </script>
+</body>
+</html>
